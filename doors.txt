@@ -1,13 +1,193 @@
--- Ультра-стабильный загрузчик для Xeno
-local success, result = pcall(function()
-    return game:HttpGet("https://raw.githubusercontent.com/vladi2022kr-lang/doors_script/main/doors.txt")
+-- ==========================================================
+-- DOORS: ULTIMATE PRIVATE HUB (XENO OPTIMIZED)
+-- ==========================================================
+
+pcall(function()
+    local oldNameCall
+    oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if (method == "Kick" or method == "Ban") and self == game.Players.LocalPlayer then
+            return
+        end
+        return oldNameCall(self, ...)
+    end)
 end)
 
-if success and result then
-    local runSuccess, err = pcall(loadstring(result))
-    if not runSuccess then
-        warn("[Loader Error]: Ошибка внутри самого скрипта -> " .. tostring(err))
-    end
-else
-    warn("[Loader Error]: Не удалось скачать скрипт по ссылке (проверь интернет или Raw-ссылку)")
+local successLoad, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+
+if not successLoad or not Rayfield then
+    warn("[Loader Error] Failed to load Rayfield UI library.")
+    return
 end
+
+local Window = Rayfield:CreateWindow({
+   Name = "DOORS | Ultimate Private Hub",
+   LoadingTitle = "Initializing...",
+   LoadingSubtitle = "Secure Core",
+   ConfigurationSaving = { Enabled = false },
+   KeySystem = false,
+})
+
+Rayfield:Notify({
+   Title = "Status",
+   Content = "Script loaded successfully!",
+   Duration = 3
+})
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local localPlayer = Players.LocalPlayer
+
+pcall(function()
+    if Rayfield.CoreGui then
+        Rayfield.CoreGui.DisplayOrder = 999999
+        Rayfield.CoreGui.ResetOnSpawn = false
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        pcall(function()
+            local mainUI = CoreGui:FindFirstChild("Rayfield") or localPlayer.PlayerGui:FindFirstChild("Rayfield")
+            if mainUI then
+                local container = mainUI:FindFirstChild("Main")
+                if container then
+                    container.Visible = not container.Visible
+                end
+            end
+        end)
+    end
+end)
+
+getgenv().DoorsHub = {
+    AutoPlay = false,
+    AutoOpen = true,
+    Speed = 18
+}
+
+local MainTab = Window:CreateTab("Auto-Play", 4483362458)
+local AdminTab = Window:CreateTab("Admin Items", 4483362458)
+
+MainTab:CreateToggle({
+   Name = "Auto-Play (AI Pathfinding)",
+   CurrentValue = false,
+   Callback = function(Value)
+      getgenv().DoorsHub.AutoPlay = Value
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Auto-Open Doors",
+   CurrentValue = true,
+   Callback = function(Value)
+      getgenv().DoorsHub.AutoOpen = Value
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "WalkSpeed",
+   Range = {16, 24},
+   Increment = 1,
+   CurrentValue = 18,
+   Callback = function(Value)
+      getgenv().DoorsHub.Speed = Value
+   end,
+})
+
+local function getRoomsFolder()
+    return Workspace:FindFirstChild("Rooms") or Workspace:FindFirstChild("CurrentRooms") or Workspace:FindFirstChild("Floor")
+end
+
+AdminTab:CreateSection("Item Spawner")
+
+local function giveItem(itemName)
+    pcall(function()
+        local itemsFolder = ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage:FindFirstChild("ToolModules") or ReplicatedStorage
+        local itemTemplate = itemsFolder:FindFirstChild(itemName, true)
+        
+        if itemTemplate then
+            itemTemplate:Clone().Parent = localPlayer.Backpack
+        else
+            local tool = Instance.new("Tool")
+            tool.Name = itemName
+            tool.RequiresHandle = true
+            local handle = Instance.new("Part")
+            handle.Name = "Handle"
+            handle.Size = Vector3.new(1, 1, 1)
+            handle.Parent = tool
+            tool.Parent = localPlayer.Backpack
+        end
+        Rayfield:Notify({Title = "Admin", Content = "Given: " .. itemName, Duration = 2})
+    end)
+end
+
+AdminTab:CreateButton({
+   Name = "Give: Crucifix",
+   Callback = function() giveItem("Crucifix") end,
+})
+
+AdminTab:CreateButton({
+   Name = "Give: Skeleton Key",
+   Callback = function() giveItem("SkeletonKey") end,
+})
+
+AdminTab:CreateButton({
+   Name = "Give: Starlight Barrel",
+   Callback = function() giveItem("StarlightBarrel") end,
+})
+
+AdminTab:CreateButton({
+   Name = "Give: Scanner",
+   Callback = function() giveItem("Scanner") end,
+})
+
+local function safeMove(targetPos, hum, char)
+    local path = game:GetService("PathfindingService"):CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
+    local success = pcall(function() path:ComputeAsync(char.HumanoidRootPart.Position, targetPos) end)
+    
+    if success and path.Status == Enum.PathStatus.Success then
+        for _, wp in ipairs(path:GetWaypoints()) do
+            if not getgenv().DoorsHub.AutoPlay then break end
+            hum:MoveTo(wp.Position)
+            if wp.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
+            path.Reached:Wait()
+        end
+    else
+        hum:MoveTo(targetPos)
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.2) do
+        if getgenv().DoorsHub.AutoPlay then
+            pcall(function()
+                local char = localPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hum = char:FindFirstChild("Humanoid")
+                hum.WalkSpeed = getgenv().DoorsHub.Speed
+
+                local rooms = getRoomsFolder()
+                if rooms then
+                    for _, room in ipairs(rooms:GetChildren()) do
+                        local door = room:FindFirstChild("Door")
+                        if door then
+                            local knob = door:FindFirstChild("Knob", true)
+                            if knob then
+                                safeMove(knob.Position, hum, char)
+                                if getgenv().DoorsHub.AutoOpen and (char.HumanoidRootPart.Position - knob.Position).Magnitude < 9 then
+                                    fireproximityprompt(knob:FindFirstChildOfClass("ProximityPrompt"))
+                                    task.wait(0.3)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
