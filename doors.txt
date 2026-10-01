@@ -15,12 +15,12 @@ pcall(function()
     end)
 end)
 
--- 2. ЗАГРУЗКА UI БИБЛИОТЕКИ
+-- 2. ЗАГРУЗКА UI-БИБЛИОТЕКИ
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
    Name = "DOORS | Ultimate Private Hub & Admin (The Archives)",
-   LoadingTitle = "Initializing Secure Core...",
+   LoadingTitle = "Инициализация защищенного ядра...",
    LoadingSubtitle = "by Private Dev",
    ConfigurationSaving = { Enabled = false },
    KeySystem = false,
@@ -92,7 +92,6 @@ local function giveItem(itemName)
             local cloned = itemTemplate:Clone()
             cloned.Parent = localPlayer.Backpack
         else
-            -- Резервный метод для кастомной выдачи
             local tool = Instance.new("Tool")
             tool.Name = itemName
             tool.RequiresHandle = true
@@ -153,7 +152,6 @@ VisualsTab:CreateToggle({
 -- ЛОГИЧЕСКИЕ ПОТОКИ И ФОНОВЫЕ ПРОЦЕССЫ
 -- ==========================================================
 
--- Защита от киков по скорости (Anti-Cheat WalkSpeed Stabilizer)
 task.spawn(function()
     RunService.Stepped:Connect(function()
         pcall(function()
@@ -169,7 +167,6 @@ task.spawn(function()
     end)
 end)
 
--- Безопасный обход препятствий через PathfindingService
 local function safeMove(targetPos)
     local char = localPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -190,7 +187,6 @@ local function safeMove(targetPos)
     end
 end
 
--- Основной цикл ИИ-прохождения комнат
 task.spawn(function()
     while task.wait(0.2) do
         if getgenv().DoorsHub.AutoPlay then
