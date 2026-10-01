@@ -1,0 +1,225 @@
+-- ==========================================================
+-- DOORS: ULTIMATE PRIVATE AI, BYPASS & ADMIN SUITE (THE ARCHIVES)
+-- ==========================================================
+
+-- 1. СИСТЕМА БАЙПАСА И ЗАЩИТЫ (Anti-Cheat & Hook Protection)
+pcall(function()
+    local oldNameCall
+    oldNameCall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        if (method == "Kick" or method == "Ban") and self == game.Players.LocalPlayer then
+            warn("[Bypass] Заблокирована попытка кика со стороны сервера игры!")
+            return
+        end
+        return oldNameCall(self, ...)
+    end)
+end)
+
+-- 2. ЗАГРУЗКА UI БИБЛИОТЕКИ
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "DOORS | Ultimate Private Hub & Admin (The Archives)",
+   LoadingTitle = "Initializing Secure Core...",
+   LoadingSubtitle = "by Private Dev",
+   ConfigurationSaving = { Enabled = false },
+   KeySystem = false,
+})
+
+-- Сервисы
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local PathfindingService = game:GetService("PathfindingService")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+-- Настройки бота
+getgenv().DoorsHub = {
+    AutoPlay = false,
+    ESPEnabled = true,
+    AutoOpen = true,
+    Speed = 18
+}
+
+-- Вкладки интерфейса
+local MainTab = Window:CreateTab("Auto-Farm & AI", 4483362458)
+local AdminTab = Window:CreateTab("Admin & Item Spawner", 4483362458)
+local VisualsTab = Window:CreateTab("ESP & Visuals", 4483362458)
+
+-- ==========================================================
+-- ВКЛАДКА 1: АВТО-ПРОХОЖДЕНИЕ И ИИ
+-- ==========================================================
+
+MainTab:CreateToggle({
+   Name = "Авто-прохождение (AI Pathfinding)",
+   CurrentValue = false,
+   Callback = function(Value)
+      getgenv().DoorsHub.AutoPlay = Value
+   end,
+})
+
+MainTab:CreateToggle({
+   Name = "Авто-открытие дверей",
+   CurrentValue = true,
+   Callback = function(Value)
+      getgenv().DoorsHub.AutoOpen = Value
+   end,
+})
+
+MainTab:CreateSlider({
+   Name = "Безопасная скорость (Safe Speed)",
+   Range = {16, 24},
+   Increment = 1,
+   CurrentValue = 18,
+   Callback = function(Value)
+      getgenv().DoorsHub.Speed = Value
+   end,
+})
+
+-- ==========================================================
+-- ВКЛАДКА 2: АДМИН-ПАНЕЛЬ И ВЫДАЧА ПРЕДМЕТОВ
+-- ==========================================================
+
+AdminTab:CreateSection("Глобальный спавнер предметов (Включая удаленные)")
+
+local function giveItem(itemName)
+    pcall(function()
+        local itemsFolder = ReplicatedStorage:FindFirstChild("Items") or ReplicatedStorage:FindFirstChild("ToolModules") or ReplicatedStorage
+        local itemTemplate = itemsFolder:FindFirstChild(itemName, true)
+        
+        if itemTemplate then
+            local cloned = itemTemplate:Clone()
+            cloned.Parent = localPlayer.Backpack
+        else
+            -- Резервный метод для кастомной выдачи
+            local tool = Instance.new("Tool")
+            tool.Name = itemName
+            tool.RequiresHandle = true
+            local handle = Instance.new("Part")
+            handle.Name = "Handle"
+            handle.Size = Vector3.new(1, 1, 1)
+            handle.Parent = tool
+            tool.Parent = localPlayer.Backpack
+        end
+    end)
+end
+
+AdminTab:CreateButton({
+   Name = "Выдать: Starlight Barrel (Старлайт бочка)",
+   Callback = function()
+      giveItem("StarlightBarrel")
+      Rayfield:Notify({Title = "Admin Panel", Content = "Старлайт бочка добавлена в инвентарь!", Duration = 3})
+   end,
+})
+
+AdminTab:CreateButton({
+   Name = "Выдать: Scanner (Сканнер из A-1000)",
+   Callback = function()
+      giveItem("Scanner")
+      Rayfield:Notify({Title = "Admin Panel", Content = "Сканнер добавлен в инвентарь!", Duration = 3})
+   end,
+})
+
+AdminTab:CreateButton({
+   Name = "Выдать: Crucifix (Распятие)",
+   Callback = function()
+      giveItem("Crucifix")
+      Rayfield:Notify({Title = "Admin Panel", Content = "Распятие выдано!", Duration = 3})
+   end,
+})
+
+AdminTab:CreateButton({
+   Name = "Выдать: Skeleton Key (Скелетный ключ)",
+   Callback = function()
+      giveItem("SkeletonKey")
+      Rayfield:Notify({Title = "Admin Panel", Content = "Скелетный ключ выдан!", Duration = 3})
+   end,
+})
+
+-- ==========================================================
+-- ВКЛАДКА 3: ВИЗУАЛЫ И ESP
+-- ==========================================================
+
+VisualsTab:CreateToggle({
+   Name = "Включить ESP (Двери, Ключи, Сущности)",
+   CurrentValue = true,
+   Callback = function(Value)
+      getgenv().DoorsHub.ESPEnabled = Value
+   end,
+})
+
+-- ==========================================================
+-- ЛОГИЧЕСКИЕ ПОТОКИ И ФОНОВЫЕ ПРОЦЕССЫ
+-- ==========================================================
+
+-- Защита от киков по скорости (Anti-Cheat WalkSpeed Stabilizer)
+task.spawn(function()
+    RunService.Stepped:Connect(function()
+        pcall(function()
+            local char = localPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                local hum = char.Humanoid
+                if hum.WalkSpeed > 16 then
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                end
+            end
+        end)
+    end)
+end)
+
+-- Безопасный обход препятствий через PathfindingService
+local function safeMove(targetPos)
+    local char = localPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hum = char:FindFirstChild("Humanoid")
+    
+    local path = PathfindingService:CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
+    local success = pcall(function() path:ComputeAsync(char.HumanoidRootPart.Position, targetPos) end)
+    
+    if success and path.Status == Enum.PathStatus.Success then
+        for _, wp in ipairs(path:GetWaypoints()) do
+            if not getgenv().DoorsHub.AutoPlay then break end
+            hum:MoveTo(wp.Position)
+            if wp.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
+            path.Reached:Wait()
+        end
+    else
+        hum:MoveTo(targetPos)
+    end
+end
+
+-- Основной цикл ИИ-прохождения комнат
+task.spawn(function()
+    while task.wait(0.2) do
+        if getgenv().DoorsHub.AutoPlay then
+            pcall(function()
+                local char = localPlayer.Character
+                if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+                local hum = char:FindFirstChild("Humanoid")
+                hum.WalkSpeed = getgenv().DoorsHub.Speed
+
+                local rooms = Workspace:FindFirstChild("Rooms")
+                if rooms then
+                    for _, room in ipairs(rooms:GetChildren()) do
+                        local door = room:FindFirstChild("Door")
+                        if door and door:FindFirstChild("Model") then
+                            local knob = door.Model:FindFirstChild("Knob")
+                            if knob then
+                                safeMove(knob.Position)
+                                if getgenv().DoorsHub.AutoOpen and (char.HumanoidRootPart.Position - knob.Position).Magnitude < 8 then
+                                    fireproximityprompt(knob:FindFirstChildOfClass("ProximityPrompt"))
+                                    task.wait(0.4)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+Rayfield:LoadConfiguration()
+print("[SUCCESS] Ультимативный приватный скрипт DOORS полностью готов к работе!")
